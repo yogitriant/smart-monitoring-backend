@@ -7,10 +7,10 @@ const Uptime = require("../models/Uptime");
 const verifyToken = require("../middleware/verifyToken");
 const dayjs = require("dayjs");
 
-router.get("/:id", verifyToken, async (req, res) => {
+router.get("/:id", async (req, res) => {
   try {
     // 1. Ambil PC + lokasi
-    const pc = await Pc.findById(req.params.id).populate("location");
+    const pc = await Pc.findById(req.params.id).populate("location").populate("pic", "name email department phone");
 
     if (!pc) {
       return res.status(404).json({ message: "PC not found" });

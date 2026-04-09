@@ -8,7 +8,15 @@ router.post("/", async (req, res) => {
   const { pcId, apps } = req.body;
 
   try {
-    const pc = await PC.findOne({ pcId });
+    // Agent sends ObjectId as pcId, fallback to pcId string search
+    let pc = null;
+    const mongoose = require("mongoose");
+    if (mongoose.isValidObjectId(pcId)) {
+      pc = await PC.findById(pcId);
+    }
+    if (!pc) {
+      pc = await PC.findOne({ pcId });
+    }
     if (!pc) {
       return res.status(404).json({ message: "PC tidak ditemukan" });
     }

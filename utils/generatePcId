@@ -2,18 +2,23 @@ const Pc = require("../models/Pc");
 
 const pad = (num, len) => num.toString().padStart(len, "0");
 
-const generatePcId = async (type = "DT") => {
+const generatePcId = async () => {
   const now = new Date();
-  const yy = now.getFullYear().toString().slice(-2);
-  const dd = pad(now.getDate(), 2);
-  const mm = pad(now.getMonth() + 1, 2);
 
-  const prefix = `${type}${yy}/${dd}/${mm}`;
+  const yy = now.getFullYear().toString().slice(-2); // contoh: 25
+  const mm = pad(now.getMonth() + 1, 2); // contoh: 09
+  const dd = pad(now.getDate(), 2); // contoh: 01
 
-  const regex = new RegExp(`^${prefix}\\d{3}$`);
+  // Prefix unik per tanggal
+  const prefix = `IT${yy}${mm}${dd}`;
+
+  // Hitung jumlah pcId dengan prefix hari ini
+  const regex = new RegExp(`^${prefix}\\d{4}$`);
   const count = await Pc.countDocuments({ pcId: { $regex: regex } });
 
-  const next = pad(count + 1, 3);
+  // Urutan dimulai dari 0001 setiap hari
+  const next = pad(count + 1, 4);
+
   return `${prefix}${next}`;
 };
 

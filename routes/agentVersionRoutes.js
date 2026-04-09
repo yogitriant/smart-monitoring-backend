@@ -1,3 +1,4 @@
+//routes/agentVersionRoutes.js
 const express = require("express");
 const fs = require("fs");
 const path = require("path");
@@ -9,7 +10,7 @@ router.get("/versions", async (req, res) => {
   try {
     const versions = await AgentVersion.find()
       .sort({ uploadDate: -1 })
-      .select("version uploadDate changelog");
+      .select("version uploadDate changelog hash");
     res.json(versions);
   } catch (err) {
     console.error("❌ Gagal ambil versi:", err.message);

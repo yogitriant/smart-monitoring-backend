@@ -14,6 +14,7 @@ router.get("/", async (req, res) => {
     res.status(500).json({ message: "Gagal mengambil settings" });
   }
 });
+
 // ✅ GET config agent berdasarkan pcId
 router.get("/agent-config/:id", async (req, res) => {
   try {
@@ -24,6 +25,7 @@ router.get("/agent-config/:id", async (req, res) => {
       idleTimeout: pc.idleTimeout || 0,
       shutdownDelay: pc.shutdownDelay || 60,
       uptimeInterval: 10,
+      performanceInterval: pc.performanceInterval || 3600,
     };
 
     res.json(config);
@@ -32,7 +34,6 @@ router.get("/agent-config/:id", async (req, res) => {
   }
 });
 
-// POST settings
 // POST settings
 router.post("/", async (req, res) => {
   try {
@@ -75,6 +76,8 @@ router.post("/", async (req, res) => {
       _id: { $in: Array.from(affectedPcIds) },
     });
     for (const pc of affectedPcs) {
+      // Emit to both rooms: ObjectId (used by agent) and pcId string
+      io.to(pc._id.toString()).emit("agent-config-updated");
       io.to(pc.pcId).emit("agent-config-updated");
     }
 

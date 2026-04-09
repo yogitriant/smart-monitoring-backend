@@ -41,6 +41,25 @@ router.get("/:id", async (req, res) => {
     });
 
     if (!report) return res.status(404).json({ message: "Report not found" });
+
+    // Resolve any ObjectId-based pic values from old reports
+    const PicTemp = require("../models/PicTemp");
+    const picIds = report.items
+      .filter((item) => item.pic && mongoose.Types.ObjectId.isValid(item.pic) && item.pic.length === 24)
+      .map((item) => item.pic);
+
+    if (picIds.length > 0) {
+      const pics = await PicTemp.find({ _id: { $in: picIds } });
+      const picMap = {};
+      pics.forEach((p) => { picMap[p._id.toString()] = p.name || p.email || "-"; });
+
+      report.items.forEach((item) => {
+        if (picMap[item.pic]) {
+          item.pic = picMap[item.pic];
+        }
+      });
+    }
+
     res.json(report);
   } catch (err) {
     res.status(500).json({ message: "Server error" });
@@ -52,7 +71,7 @@ router.post("/", verifyToken, async (req, res) => {
   try {
     const { reportName, pcIds } = req.body;
 
-    const pcs = await Pc.find({ _id: { $in: pcIds } }).populate("location");
+    const pcs = await Pc.find({ _id: { $in: pcIds } }).populate("location").populate("pic");
     const specs = await Spec.find({ pc: { $in: pcIds } });
 
     const items = pcs.map((pc) => {
@@ -71,7 +90,7 @@ router.post("/", verifyToken, async (req, res) => {
         location: `${pc.location?.campus || "-"} - ${pc.location?.room || "-"}`,
         ram,
         storage,
-        pic: pc.pic || "-",
+        pic: pc.pic?.name || pc.pic?.email || "-",
         status: "-",
         kondisi: "-",
         keterangan: "-",
@@ -133,7 +152,7 @@ router.patch("/:id", verifyToken, async (req, res) => {
     }
 
     // 2. Ambil data PC dan Spec terbaru
-    const pcs = await Pc.find({ _id: { $in: pcIds } }).populate("location");
+    const pcs = await Pc.find({ _id: { $in: pcIds } }).populate("location").populate("pic");
     const specs = await Spec.find({ pc: { $in: pcIds } });
 
     // 3. Susun ulang items dengan mempertahankan data teknisi lama (jika ada)
@@ -143,7 +162,7 @@ router.patch("/:id", verifyToken, async (req, res) => {
 
       return {
         pcObjectId: pc._id.toString(),
-        pic: pc.pic || "-",
+        pic: pc.pic?.name || pc.pic?.email || "-",
         pcId: pc.pcId,
         serialNumber: pc.serialNumber,
         assetNumber: pc.assetNumber,

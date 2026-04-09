@@ -6,6 +6,10 @@ const userSchema = new mongoose.Schema(
     username: { type: String, required: true, unique: true },
     email: { type: String, required: true, unique: true }, // ✅ baru ditambahkan
     password: { type: String, required: true },
+    site: { type: String, default: "" },
+    department: { type: String, default: "" },
+    loginAttempts: { type: Number, required: true, default: 0 },
+    lockUntil: { type: Number },
     role: {
       type: String,
       enum: ["admin", "user", "superadmin"],

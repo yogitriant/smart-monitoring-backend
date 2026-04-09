@@ -23,6 +23,7 @@ const diskSchema = new mongoose.Schema(
 const specSchema = new mongoose.Schema(
   {
     pc: { type: mongoose.Schema.Types.ObjectId, ref: "Pc", unique: true },
+    hostname: String,
     brand: String,
     model: String,
     macAddress: {

@@ -1,6 +1,9 @@
 const jwt = require("jsonwebtoken");
 
-const JWT_SECRET = process.env.JWT_SECRET || "smartmonitoring-secret";
+const JWT_SECRET = process.env.JWT_SECRET;
+if (!JWT_SECRET) {
+  throw new Error("❌ JWT_SECRET belum diset di environment variable!");
+}
 
 const verifyToken = (req, res, next) => {
   // ✅ Bypass auth untuk /api/pc/register (boleh ditambah lainnya kalau perlu)
@@ -21,7 +24,7 @@ const verifyToken = (req, res, next) => {
 
   try {
     const decoded = jwt.verify(token, JWT_SECRET);
-    console.log("✅ Token verified, payload:", decoded);
+
     req.user = decoded;
     next();
   } catch (err) {
