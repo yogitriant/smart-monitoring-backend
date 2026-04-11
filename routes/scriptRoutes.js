@@ -4,11 +4,11 @@ const mongoose = require("mongoose");
 const Script = require("../models/Script");
 const ScriptLog = require("../models/ScriptLog");
 const verifyToken = require("../middleware/verifyToken");
-const verifyAdmin = require("../middleware/verifyAdmin");
+const verifySuperAdmin = require("../middleware/verifySuperAdmin");
 const { getSocketIo } = require("../socketRegistry");
 
 // 1. Get all scripts
-router.get("/", verifyToken, verifyAdmin, async (req, res) => {
+router.get("/", verifyToken, verifySuperAdmin, async (req, res) => {
   try {
     const scripts = await Script.find().sort({ createdAt: -1 });
     res.json(scripts);
@@ -19,7 +19,7 @@ router.get("/", verifyToken, verifyAdmin, async (req, res) => {
 });
 
 // 2. Get script by ID
-router.get("/:id", verifyToken, verifyAdmin, async (req, res) => {
+router.get("/:id", verifyToken, verifySuperAdmin, async (req, res) => {
   try {
     const script = await Script.findById(req.params.id);
     if (!script) return res.status(404).json({ message: "Script not found" });
@@ -31,7 +31,7 @@ router.get("/:id", verifyToken, verifyAdmin, async (req, res) => {
 });
 
 // 3. Create a new script
-router.post("/", verifyToken, verifyAdmin, async (req, res) => {
+router.post("/", verifyToken, verifySuperAdmin, async (req, res) => {
   try {
     const { name, description, content, type } = req.body;
     const newScript = new Script({
@@ -50,7 +50,7 @@ router.post("/", verifyToken, verifyAdmin, async (req, res) => {
 });
 
 // 3.5 Update a script
-router.put("/:id", verifyToken, verifyAdmin, async (req, res) => {
+router.put("/:id", verifyToken, verifySuperAdmin, async (req, res) => {
   try {
     const { name, description, content, type } = req.body;
     const script = await Script.findByIdAndUpdate(
@@ -67,7 +67,7 @@ router.put("/:id", verifyToken, verifyAdmin, async (req, res) => {
 });
 
 // 4. Delete a script
-router.delete("/:id", verifyToken, verifyAdmin, async (req, res) => {
+router.delete("/:id", verifyToken, verifySuperAdmin, async (req, res) => {
   try {
     const script = await Script.findByIdAndDelete(req.params.id);
     if (!script) return res.status(404).json({ message: "Script not found" });
@@ -79,7 +79,7 @@ router.delete("/:id", verifyToken, verifyAdmin, async (req, res) => {
 });
 
 // 5. Execute script on one or multiple PCs
-router.post("/execute", verifyToken, verifyAdmin, async (req, res) => {
+router.post("/execute", verifyToken, verifySuperAdmin, async (req, res) => {
   try {
     const { scriptId, pcIds } = req.body; // pcIds can be an array
 
@@ -127,7 +127,7 @@ router.post("/execute", verifyToken, verifyAdmin, async (req, res) => {
 });
 
 // 6. Get execution logs for a script
-router.get("/logs/:scriptId", verifyToken, verifyAdmin, async (req, res) => {
+router.get("/logs/:scriptId", verifyToken, verifySuperAdmin, async (req, res) => {
   try {
     const logs = await ScriptLog.find({ scriptId: req.params.scriptId })
       .populate("pcId", "pcId serialNumber userLogin ipAddress")
