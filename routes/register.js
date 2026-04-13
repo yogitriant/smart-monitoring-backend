@@ -116,8 +116,6 @@ router.post("/register", async (req, res) => {
       await Asset.create({
         faNumber: safeString(assetNumber, "") || undefined, // assetNumber = faNumber
         serialNumber,
-        productCategory: "Hardware",
-        subCategory: subCat,
         status: "Deployed",
         site: siteName,
         ownerFullname: ownerName,
