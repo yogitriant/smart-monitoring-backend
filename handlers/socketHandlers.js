@@ -2,6 +2,7 @@
 // Semua socket.io event handler dipindahkan dari server.js ke sini
 
 const mongoose = require("mongoose");
+const axios = require("axios");
 const Performance = require("../models/Performance");
 const Pc = require("../models/Pc");
 const Uptime = require("../models/Uptime");
@@ -12,6 +13,18 @@ const { processSpec } = require("../services/specProcessor");
 const { resolveGeolocation } = require("../utils/geoResolver");
 
 const socketMap = new Map();
+
+// 🌍 Server discovers its own Public IP at startup (shared by all PCs behind same NAT)
+let serverPublicIp = null;
+(async () => {
+  try {
+    const res = await axios.get("https://api.ipify.org?format=json", { timeout: 8000 });
+    serverPublicIp = res.data.ip;
+    console.log(`🌍 Server Public IP detected: ${serverPublicIp}`);
+  } catch (err) {
+    console.warn("⚠️ Could not detect server public IP:", err.message);
+  }
+})();
 
 function registerSocketHandlers(io) {
   io.on("connection", (socket) => {
@@ -30,22 +43,23 @@ function registerSocketHandlers(io) {
           console.log(`🟢 Set PC ${pcId} to online`);
 
           // 🗺️ Resolve Geolocation (non-blocking)
-          try {
-            const realIp = socket.handshake.headers["x-forwarded-for"]?.split(",")[0]?.trim()
-              || socket.handshake.address?.replace("::ffff:", "");
-            const geo = await resolveGeolocation(pc.site, realIp);
-            if (geo) {
-              await Pc.findByIdAndUpdate(pc._id, {
-                "geolocation.lat": geo.lat,
-                "geolocation.lng": geo.lng,
-                "geolocation.city": geo.city,
-                "geolocation.source": geo.source,
-                "geolocation.lastUpdated": new Date(),
-              });
-              console.log(`🗺️ Geo resolved for ${pcId}: ${geo.city} (${geo.source})`);
+          if (!pc.geolocation?.lat) {
+            try {
+              // Gunakan server's public IP sebagai fallback karena semua PC di belakang NAT yang sama
+              const geo = await resolveGeolocation(pc.site, serverPublicIp);
+              if (geo) {
+                await Pc.findByIdAndUpdate(pc._id, {
+                  "geolocation.lat": geo.lat,
+                  "geolocation.lng": geo.lng,
+                  "geolocation.city": geo.city,
+                  "geolocation.source": geo.source,
+                  "geolocation.lastUpdated": new Date(),
+                });
+                console.log(`🗺️ Geo resolved for ${pcId}: ${geo.city} (${geo.source})`);
+              }
+            } catch (geoErr) {
+              console.warn("⚠️ Geo resolve failed:", geoErr.message);
             }
-          } catch (geoErr) {
-            console.warn("⚠️ Geo resolve failed:", geoErr.message);
           }
         }
       } catch (err) {
