@@ -112,6 +112,7 @@ function registerSocketHandlers(io) {
               status,
               "performance.cpuUsage": cpuUsage,
               "performance.ramUsage": ramUsage,
+              "performance.diskUsage": diskUsage,
               "performance.idleRaw": idleTime,
               "performance.idleTime": idleFor,
               "performance.battery": battery,

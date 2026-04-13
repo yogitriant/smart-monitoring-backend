@@ -37,6 +37,9 @@ const pcSchema = new mongoose.Schema(
     performance: {
       cpuUsage: Number,
       ramUsage: Number,
+      diskUsage: [
+        { drive: String, used: Number, total: Number }
+      ],
       idleRaw: Number,   // dari agent, mentah
       idleTime: Number,  // hasil setelah threshold
       battery: {
