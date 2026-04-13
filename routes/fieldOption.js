@@ -1,6 +1,9 @@
 const express = require("express");
 const router = express.Router();
 const FieldOption = require("../models/FieldOption");
+const verifyToken = require("../middleware/verifyToken");
+
+router.use(verifyToken);
 
 // GET all field options, optionally filtered by type
 router.get("/", async (req, res) => {

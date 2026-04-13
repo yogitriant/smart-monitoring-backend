@@ -1,6 +1,9 @@
 const express = require("express");
 const router = express.Router();
 const Location = require("../models/Location");
+const verifyToken = require("../middleware/verifyToken");
+
+router.use(verifyToken);
 
 // 🔍 Ambil semua lokasi
 router.get("/", async (req, res) => {

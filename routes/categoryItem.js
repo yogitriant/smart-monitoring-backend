@@ -1,6 +1,9 @@
 const express = require("express");
 const router = express.Router();
 const CategoryItem = require("../models/CategoryItem");
+const verifyToken = require("../middleware/verifyToken");
+
+router.use(verifyToken);
 
 // GET all
 router.get("/", async (req, res) => {

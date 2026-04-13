@@ -11,6 +11,7 @@
     "jsonwebtoken": "^9.0.2",
     "mongoose": "^8.14.1",
     "multer": "^2.0.1",
-    "socket.io": "^4.8.1"
+    "socket.io": "^4.8.1",
+    "xlsx": "^0.18.5"
   }
 }
