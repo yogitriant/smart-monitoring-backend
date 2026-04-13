@@ -192,6 +192,25 @@ router.put("/:id", verifyToken, async (req, res) => {
             return res.status(404).json({ message: "Asset tidak ditemukan" });
         }
 
+        // Catat Log Edit Asset ke PcHistory
+        try {
+            let logPcId = asset.serialNumber || "-";
+            if (asset.pc) {
+                const linkedPc = await Pc.findById(asset.pc).lean();
+                if (linkedPc) logPcId = linkedPc.pcId || linkedPc.serialNumber;
+            }
+            await PcHistory.create({
+                pcId: logPcId,
+                oldData: existingAsset.toObject(),
+                newData: asset.toObject(),
+                action: "edit",
+                adminName: req.user?.username || "system (asset edit)",
+                timestamp: new Date(),
+            });
+        } catch (logErr) {
+            console.error("⚠️ Gagal mencatat log tipe Asset Edit:", logErr.message);
+        }
+
         // 🔄 Sync ke PC yang terhubung (non-blocking)
         if (asset.pc) {
             try {
