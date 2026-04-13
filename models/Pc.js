@@ -28,6 +28,15 @@ const pcSchema = new mongoose.Schema(
     },
     lastActive: Date,
 
+    // 🗺️ Geolocation (resolved from site or IP)
+    geolocation: {
+      lat: Number,
+      lng: Number,
+      city: String,
+      source: { type: String, enum: ["site", "ip", "manual"], default: "site" },
+      lastUpdated: Date
+    },
+
     // Agent settings
     idleTimeout: { type: Number, default: 0 },
     shutdownDelay: { type: Number, default: 0 },

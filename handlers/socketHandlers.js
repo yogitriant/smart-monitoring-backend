@@ -9,6 +9,7 @@ const AgentUpdateLog = require("../models/AgentUpdateLog");
 const ScriptLog = require("../models/ScriptLog");
 const { applyIdleThreshold } = require("../utils/idleHelper");
 const { processSpec } = require("../services/specProcessor");
+const { resolveGeolocation } = require("../utils/geoResolver");
 
 const socketMap = new Map();
 
@@ -27,6 +28,25 @@ function registerSocketHandlers(io) {
             lastActive: new Date(),
           });
           console.log(`🟢 Set PC ${pcId} to online`);
+
+          // 🗺️ Resolve Geolocation (non-blocking)
+          try {
+            const realIp = socket.handshake.headers["x-forwarded-for"]?.split(",")[0]?.trim()
+              || socket.handshake.address?.replace("::ffff:", "");
+            const geo = await resolveGeolocation(pc.site, realIp);
+            if (geo) {
+              await Pc.findByIdAndUpdate(pc._id, {
+                "geolocation.lat": geo.lat,
+                "geolocation.lng": geo.lng,
+                "geolocation.city": geo.city,
+                "geolocation.source": geo.source,
+                "geolocation.lastUpdated": new Date(),
+              });
+              console.log(`🗺️ Geo resolved for ${pcId}: ${geo.city} (${geo.source})`);
+            }
+          } catch (geoErr) {
+            console.warn("⚠️ Geo resolve failed:", geoErr.message);
+          }
         }
       } catch (err) {
         console.error("❌ Error setting online status:", err.message);

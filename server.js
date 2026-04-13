@@ -39,6 +39,7 @@ const categoryItemRoute = require("./routes/categoryItem");
 const regionSiteItemRoute = require("./routes/regionSiteItem");
 const analyticsRoute = require("./routes/analytics");
 const scriptRoute = require("./routes/scriptRoutes");
+const geolocationRoute = require("./routes/geolocation");
 
 // ============ CORS ORIGINS (dari .env) ============ //
 const corsOrigins = process.env.CORS_ORIGINS
@@ -98,6 +99,7 @@ app.use("/api/category-items", categoryItemRoute);
 app.use("/api/region-site-items", regionSiteItemRoute);
 app.use("/api/analytics", analyticsRoute);
 app.use("/api/scripts", scriptRoute);
+app.use("/api/geolocation", geolocationRoute);
 app.use(
   "/agent_versions",
   express.static(path.join(__dirname, "public", "agent_versions"))
