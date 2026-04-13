@@ -21,10 +21,11 @@ router.post("/", async (req, res) => {
       return res.status(404).json({ message: "PC tidak ditemukan" });
     }
 
-    const saved = await InstalledApp.create({
-      pc: pc._id,
-      apps,
-    });
+    const saved = await InstalledApp.findOneAndUpdate(
+      { pc: pc._id },
+      { apps },
+      { new: true, upsert: true }
+    );
 
     res.json(saved);
   } catch (err) {
