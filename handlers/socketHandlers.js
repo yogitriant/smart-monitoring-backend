@@ -104,7 +104,7 @@ function registerSocketHandlers(io) {
     // Performance data from agent
     socket.on("performance", async (data) => {
       try {
-        const { pc, cpuUsage, ramUsage, diskUsage, diskHealth, battery, activeIp, uptime, agentUptime, idleTime, timestamp } = data;
+        const { pc, cpuUsage, ramUsage, diskUsage, diskHealth, battery, activeIp, publicIp, uptime, agentUptime, idleTime, timestamp } = data;
 
         const pcDoc = await Pc.findById(pc).lean();
         const threshold = pcDoc?.idleTimeout || 300;
@@ -142,6 +142,26 @@ function registerSocketHandlers(io) {
             },
           }
         );
+
+        // 🗺️ Auto-resolve Geolocation dari Public IP agen (non-blocking)
+        if (publicIp && (!pcDoc?.geolocation?.lat || pcDoc?.geolocation?.source === "ip")) {
+          try {
+            const geo = await resolveGeolocation(pcDoc?.site, publicIp);
+            if (geo) {
+              await Pc.updateOne({ _id: pc }, {
+                $set: {
+                  "geolocation.lat": geo.lat,
+                  "geolocation.lng": geo.lng,
+                  "geolocation.city": geo.city,
+                  "geolocation.source": geo.source,
+                  "geolocation.lastUpdated": new Date(),
+                }
+              });
+            }
+          } catch (geoErr) {
+            // Silent fail — geo is non-critical
+          }
+        }
       } catch (err) {
         console.error("❌ Performance save error:", err.message);
       }
