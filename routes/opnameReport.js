@@ -87,7 +87,7 @@ router.post("/", verifyToken, async (req, res) => {
         pcId: pc.pcId, // ✅ tampilkan ke user
         serialNumber: pc.serialNumber,
         assetNumber: pc.assetNumber,
-        location: `${pc.location?.campus || "-"} - ${pc.location?.room || "-"}`,
+        location: [pc.site || pc.location?.campus, pc.location?.room].filter(Boolean).join(" - ") || "-",
         ram,
         storage,
         pic: pc.pic?.name || pc.pic?.email || "-",
@@ -166,7 +166,7 @@ router.patch("/:id", verifyToken, async (req, res) => {
         pcId: pc.pcId,
         serialNumber: pc.serialNumber,
         assetNumber: pc.assetNumber,
-        location: `${pc.location?.campus || "-"} - ${pc.location?.room || "-"}`,
+        location: [pc.site || pc.location?.campus, pc.location?.room].filter(Boolean).join(" - ") || "-",
         ram: spec?.ram || "-",
         storage: Array.isArray(spec?.disk)
           ? spec.disk.map((d) => `${d.total} ${d.type}`).join(", ")
