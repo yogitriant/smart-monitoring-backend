@@ -87,17 +87,34 @@ router.get("/dashboard", verifyToken, async (req, res) => {
         const perfAggregation = await Performance.aggregate([
             { $match: { pc: { $in: pcIds }, timestamp: { $gte: oneHourAgo } } },
             {
+                $addFields: {
+                    totalDiskUsed: { $sum: "$diskUsage.used" },
+                    totalDiskSize: { $sum: "$diskUsage.total" }
+                }
+            },
+            {
+                $addFields: {
+                    avgDiskPercent: {
+                        $cond: [
+                            { $gt: ["$totalDiskSize", 0] },
+                            { $multiply: [ { $divide: ["$totalDiskUsed", "$totalDiskSize"] }, 100 ] },
+                            0
+                        ]
+                    }
+                }
+            },
+            {
                 $group: {
                     _id: null,
                     avgCpu: { $avg: "$cpuUsage" },
                     avgRam: { $avg: "$ramUsage" },
-                    // avgDisk requires unfolding if it's an array
+                    avgDisk: { $avg: "$avgDiskPercent" }
                 },
             },
         ]);
 
         let perfStats = perfAggregation.length > 0 
-            ? { avgCpu: perfAggregation[0].avgCpu, avgRam: perfAggregation[0].avgRam, avgDisk: 0 } 
+            ? { avgCpu: perfAggregation[0].avgCpu, avgRam: perfAggregation[0].avgRam, avgDisk: perfAggregation[0].avgDisk } 
             : { avgCpu: 0, avgRam: 0, avgDisk: 0 };
 
         res.json({
