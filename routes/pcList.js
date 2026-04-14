@@ -7,6 +7,7 @@ const Spec = require("../models/Spec");
 const Location = require("../models/Location");
 const Performance = require("../models/Performance");
 const Pic = require("../models/PicTemp");
+const Asset = require("../models/Asset");
 const verifyToken = require("../middleware/verifyToken");
 
 // helpers
@@ -288,6 +289,18 @@ router.get("/list-full", verifyToken, async (req, res) => {
       });
     }
 
+    // ---- Asset site fallback (untuk PC yang belum punya site) ----
+    const assetSiteMap = {};
+    const pcsWithoutSite = pcs.filter((pc) => !pc.site);
+    if (pcsWithoutSite.length > 0) {
+      const assets = await Asset.find({ pc: { $in: pcsWithoutSite.map((p) => p._id) } })
+        .select("pc site")
+        .lean();
+      assets.forEach((a) => {
+        if (a.site) assetSiteMap[a.pc.toString()] = a.site;
+      });
+    }
+
     // ---- Gabungkan semua data ----
     const result = pcs.map((pc) => {
       const spec = specMap[pc._id.toString()] || null;
@@ -324,10 +337,14 @@ router.get("/list-full", verifyToken, async (req, res) => {
         }
       }
 
+      // Site: gunakan pc.site, fallback ke Asset.site
+      const site = pc.site || assetSiteMap[pc._id.toString()] || "";
+
       return {
         ...pc,
         spec,
         location,
+        site,
         picName,
         picEmail,
       };

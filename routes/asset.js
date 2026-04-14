@@ -159,6 +159,27 @@ router.post("/", verifyToken, async (req, res) => {
         }
 
         const asset = await Asset.create(req.body);
+
+        // 🔄 Sync ke PC yang terhubung (jika ada) saat create
+        if (asset.pc) {
+            try {
+                const pcUpdate = {};
+                if (req.body.ownerFullname) {
+                    const picId = await resolvePic(req.body.ownerFullname);
+                    if (picId) pcUpdate.pic = picId;
+                }
+                if (req.body.faNumber !== undefined) pcUpdate.assetNumber = req.body.faNumber || "-";
+                if (req.body.location !== undefined) pcUpdate.location = req.body.location || null;
+                if (req.body.site !== undefined) pcUpdate.site = req.body.site || "";
+                
+                if (Object.keys(pcUpdate).length > 0) {
+                    await Pc.findByIdAndUpdate(asset.pc, { $set: pcUpdate });
+                }
+            } catch (syncErr) {
+                console.warn("⚠️ Sync Asset→PC failed at creation:", syncErr.message);
+            }
+        }
+
         res.status(201).json(asset);
     } catch (err) {
         console.error("❌ Gagal buat asset:", err.message);
@@ -230,6 +251,11 @@ router.put("/:id", verifyToken, async (req, res) => {
                 // Sync location → PC location
                 if (req.body.location !== undefined) {
                     pcUpdate.location = req.body.location || null;
+                }
+
+                // Sync site → PC site
+                if (req.body.site !== undefined) {
+                    pcUpdate.site = req.body.site || "";
                 }
 
                 if (Object.keys(pcUpdate).length > 0) {
