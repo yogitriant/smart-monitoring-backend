@@ -4,6 +4,7 @@ const Pc = require("../models/Pc");
 const Spec = require("../models/Spec");
 const Performance = require("../models/Performance");
 const Uptime = require("../models/Uptime");
+const Asset = require("../models/Asset");
 const verifyToken = require("../middleware/verifyToken");
 const dayjs = require("dayjs");
 
@@ -28,9 +29,17 @@ router.get("/:id", async (req, res) => {
     const today = dayjs().format("YYYY-MM-DD");
     const uptime = await Uptime.findOne({ pc: pc._id, date: today });
 
-    // 5. Gabungkan semua ke response
+    // 5. Fallback site dari Asset jika PC belum punya
+    let site = pc.site || "";
+    if (!site) {
+      const linkedAsset = await Asset.findOne({ pc: pc._id }).select("site").lean();
+      if (linkedAsset?.site) site = linkedAsset.site;
+    }
+
+    // 6. Gabungkan semua ke response
     const response = {
       ...pc.toObject(),
+      site,
       spec: spec || null,
       performance: {
         ...(latestPerformance?.toObject() || {}),
