@@ -195,6 +195,10 @@ function registerSocketHandlers(io) {
         console.error("❌ Performance save error:", err.message);
       }
     });
+    // Dashboard subscription
+    socket.on("join-dashboard", (roomName) => {
+      if (roomName) socket.join(roomName);
+    });
 
     // Uptime data from agent
     socket.on("uptime", async (data) => {
@@ -205,6 +209,7 @@ function registerSocketHandlers(io) {
           { uptimeSession, uptimeTotalToday },
           { upsert: true, new: true, setDefaultsOnInsert: true }
         );
+        io.to(pc).emit("uptime-update", { uptimeSession, uptimeTotalToday });
       } catch (err) {
         console.error("❌ Uptime save error:", err.message);
       }
