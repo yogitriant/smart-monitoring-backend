@@ -254,7 +254,7 @@ function registerSocketHandlers(io) {
         if (sId === socket.id) {
           socketMap.delete(pcId);
           try {
-            await Pc.findOneAndUpdate({ pcId }, {
+            await Pc.findByIdAndUpdate(pcId, {
               status: "offline",
               lastActive: new Date(),
             });
