@@ -78,14 +78,23 @@ function registerSocketHandlers(io) {
       try {
         const { pcId, version, status, message, action = "update" } = data;
 
-        await AgentUpdateLog.create({
-          pcId,
-          version,
-          action,
-          status,
-          message,
-          timestamp: new Date(),
-        });
+        const thirtyMinsAgo = new Date(Date.now() - 30 * 60000);
+        const existingLog = await AgentUpdateLog.findOneAndUpdate(
+          { pcId, action, status: "processing", timestamp: { $gte: thirtyMinsAgo } },
+          { status, message, version, timestamp: new Date() },
+          { sort: { timestamp: -1 }, new: true }
+        );
+
+        if (!existingLog) {
+          await AgentUpdateLog.create({
+            pcId,
+            version,
+            action,
+            status,
+            message,
+            timestamp: new Date(),
+          });
+        }
 
         if (status === "success" && mongoose.Types.ObjectId.isValid(pcId)) {
           await Pc.findByIdAndUpdate(pcId, { agentVersion: version });

@@ -1,6 +1,7 @@
 // routes/agentPush.js
 const express = require("express");
 const router = express.Router();
+const AgentUpdateLog = require("../models/AgentUpdateLog");
 
 router.post("/push", async (req, res) => {
   const { action, version, pcIds } = req.body;
@@ -9,8 +10,22 @@ router.post("/push", async (req, res) => {
     return res.status(400).json({ error: "Missing fields" });
   }
 
-  // Tidak perlu proses di sini karena hanya frontend yang trigger via socket
-  res.json({ success: true, message: "Push accepted" });
+  try {
+    const logsToInsert = pcIds.map((pcId) => ({
+      pcId,
+      version,
+      action,
+      status: "processing",
+      message: `Memproses instruksi ${action}...`,
+      timestamp: new Date(),
+    }));
+
+    await AgentUpdateLog.insertMany(logsToInsert);
+    res.json({ success: true, message: "Push accepted and logs created" });
+  } catch (err) {
+    console.error("Error inserting push logs:", err);
+    res.status(500).json({ error: "Internal server error" });
+  }
 });
 
 module.exports = router;
