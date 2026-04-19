@@ -216,16 +216,19 @@ function registerSocketHandlers(io) {
     });
 
     // Status update from agent
-    socket.on("status", async ({ pcId, status, timestamp }) => {
+    socket.on("status", async ({ pcId, status, version, timestamp }) => {
       try {
         if (!mongoose.Types.ObjectId.isValid(pcId)) {
           console.warn("⚠️ Invalid MongoDB ObjectId:", pcId);
           return;
         }
 
+        const updateData = { status, lastActive: timestamp || new Date() };
+        if (version) updateData.agentVersion = version;
+
         const updated = await Pc.findByIdAndUpdate(
           pcId,
-          { status, lastActive: timestamp || new Date() },
+          updateData,
           { new: true }
         );
 
