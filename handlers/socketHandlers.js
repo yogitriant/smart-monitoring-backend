@@ -80,7 +80,7 @@ function registerSocketHandlers(io) {
 
         const thirtyMinsAgo = new Date(Date.now() - 30 * 60000);
         const existingLog = await AgentUpdateLog.findOneAndUpdate(
-          { pcId, action, status: { $in: ["processing", "pending"] }, timestamp: { $gte: thirtyMinsAgo } },
+          { pcId, action, status: { $in: ["processing", "pending", "downloading"] }, timestamp: { $gte: thirtyMinsAgo } },
           { status, message, version, timestamp: new Date() },
           { sort: { timestamp: -1 }, new: true }
         );
