@@ -60,6 +60,16 @@ const assetSchema = new mongoose.Schema(
 
         // ─── Relasi ke PC (opsional) ───────────────────────
         pc: { type: mongoose.Schema.Types.ObjectId, ref: "Pc" },
+
+        // ─── Attachments ───────────────────────────────────
+        attachments: [{
+            filename: String,
+            originalName: String,
+            url: String,
+            uploadedAt: { type: Date, default: Date.now },
+            mimetype: String,
+            size: Number
+        }],
     },
     { timestamps: true }
 );

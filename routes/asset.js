@@ -11,6 +11,40 @@ const UpdateLog = require("../models/UpdateLog");
 const AgentUpdateLog = require("../models/AgentUpdateLog");
 const { resolvePic } = require("../utils/picResolver");
 const verifyToken = require("../middleware/verifyToken");
+const multer = require("multer");
+const path = require("path");
+const fs = require("fs");
+
+// Ensure upload directory exists
+const uploadDir = path.join(__dirname, "../public/attachments");
+if (!fs.existsSync(uploadDir)) {
+    fs.mkdirSync(uploadDir, { recursive: true });
+}
+
+const storage = multer.diskStorage({
+    destination: (req, file, cb) => {
+        cb(null, uploadDir);
+    },
+    filename: (req, file, cb) => {
+        const uniqueSuffix = Date.now() + "-" + Math.round(Math.random() * 1e9);
+        cb(null, uniqueSuffix + path.extname(file.originalname));
+    }
+});
+
+const fileFilter = (req, file, cb) => {
+    const allowedTypes = ["application/pdf", "image/jpeg", "image/png"];
+    if (allowedTypes.includes(file.mimetype)) {
+        cb(null, true);
+    } else {
+        cb(new Error("Only PDF, JPG, and PNG files are allowed"), false);
+    }
+};
+
+const upload = multer({
+    storage,
+    limits: { fileSize: 5 * 1024 * 1024 }, // 5MB limit
+    fileFilter
+});
 
 // ─── GET /api/assets/stats ── Summary counts ───────────
 router.get("/stats", verifyToken, async (req, res) => {
@@ -325,6 +359,68 @@ router.delete("/:id", verifyToken, async (req, res) => {
         res.json({ message: "Asset berhasil dihapus beserta PC/data terkait (jika ada)" });
     } catch (err) {
         console.error("❌ Gagal hapus asset:", err.message);
+        res.status(500).json({ message: "Server error" });
+    }
+});
+// ─── POST /api/assets/:id/attachments ── Upload attachments ──
+router.post("/:id/attachments", verifyToken, upload.array("files", 10), async (req, res) => {
+    try {
+        const asset = await Asset.findById(req.params.id);
+        if (!asset) return res.status(404).json({ message: "Asset tidak ditemukan" });
+
+        if (req.user && req.user.role === "user" && asset.site !== req.user.site) {
+            return res.status(403).json({ message: "Forbidden: You don't have access to edit this asset." });
+        }
+
+        if (!req.files || req.files.length === 0) {
+            return res.status(400).json({ message: "No files uploaded" });
+        }
+
+        const newAttachments = req.files.map(file => ({
+            filename: file.filename,
+            originalName: file.originalname,
+            url: `/attachments/${file.filename}`,
+            mimetype: file.mimetype,
+            size: file.size
+        }));
+
+        asset.attachments.push(...newAttachments);
+        await asset.save();
+
+        res.status(201).json(asset.attachments);
+    } catch (err) {
+        console.error("❌ Gagal upload attachment:", err.message);
+        res.status(500).json({ message: "Server error" });
+    }
+});
+
+// ─── DELETE /api/assets/:id/attachments/:attachmentId ── Hapus attachment ──
+router.delete("/:id/attachments/:attachmentId", verifyToken, async (req, res) => {
+    try {
+        const asset = await Asset.findById(req.params.id);
+        if (!asset) return res.status(404).json({ message: "Asset tidak ditemukan" });
+
+        if (req.user && req.user.role === "user" && asset.site !== req.user.site) {
+            return res.status(403).json({ message: "Forbidden: You don't have access to edit this asset." });
+        }
+
+        const attachment = asset.attachments.id(req.params.attachmentId);
+        if (!attachment) {
+            return res.status(404).json({ message: "Attachment tidak ditemukan" });
+        }
+
+        // Delete file from disk
+        const filePath = path.join(__dirname, "../public/attachments", attachment.filename);
+        if (fs.existsSync(filePath)) {
+            fs.unlinkSync(filePath);
+        }
+
+        attachment.deleteOne();
+        await asset.save();
+
+        res.json({ message: "Attachment berhasil dihapus", attachments: asset.attachments });
+    } catch (err) {
+        console.error("❌ Gagal hapus attachment:", err.message);
         res.status(500).json({ message: "Server error" });
     }
 });

@@ -49,7 +49,7 @@ const corsOrigins = process.env.CORS_ORIGINS
 // ============ APP & SERVER ============ //
 const app = express();
 // server.js
-// Trigger backend restart
+// Trigger backend restart 1
 const server = http.createServer(app);
 const io = new Server(server, {
   cors: {
@@ -103,6 +103,10 @@ app.use("/api/geolocation", geolocationRoute);
 app.use(
   "/agent_versions",
   express.static(path.join(__dirname, "public", "agent_versions"))
+);
+app.use(
+  "/attachments",
+  express.static(path.join(__dirname, "public", "attachments"))
 );
 
 // ============ GLOBAL ERROR HANDLER ============ //
