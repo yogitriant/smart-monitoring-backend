@@ -135,16 +135,19 @@ router.post("/register", async (req, res) => {
           }
         });
 
-        // Link PC ID dan update field yang mungkin masih kosong
-        existingAsset.pc = pc._id;
-        existingAsset.customSpecs = mergedSpecs;
+        // Kumpulkan data untuk di-update (menghindari issue markModified array di Mongoose)
+        const updateData = {
+          pc: pc._id,
+          customSpecs: mergedSpecs
+        };
         
         // Update data jika manual input sebelumnya kosong
-        if (!existingAsset.faNumber && safeString(assetNumber, "")) existingAsset.faNumber = safeString(assetNumber, "");
-        if (!existingAsset.site && siteName) existingAsset.site = siteName;
-        if (!existingAsset.ownerFullname && ownerName) existingAsset.ownerFullname = ownerName;
+        if (!existingAsset.faNumber && safeString(assetNumber, "")) updateData.faNumber = safeString(assetNumber, "");
+        if (!existingAsset.site && siteName) updateData.site = siteName;
+        if (!existingAsset.ownerFullname && ownerName) updateData.ownerFullname = ownerName;
 
-        await existingAsset.save();
+        // Gunakan findByIdAndUpdate agar langsung meng-overwrite document di MongoDB dengan aman
+        await Asset.findByIdAndUpdate(existingAsset._id, updateData, { new: true });
         console.log("📦 Existing Asset updated and linked to new PC:", pc.pcId);
       } else {
         // Buat baru jika belum ada
