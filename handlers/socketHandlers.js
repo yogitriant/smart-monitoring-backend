@@ -34,7 +34,15 @@ function registerSocketHandlers(io) {
       socket.join(pcId);
 
       try {
-        const pc = await Pc.findOne({ pcId });
+        // Coba cari pakai _id dulu (karena config.pcId menyimpan _id dari MongoDB)
+        let pc = null;
+        if (mongoose.Types.ObjectId.isValid(pcId)) {
+          pc = await Pc.findById(pcId);
+        }
+        // Fallback kalau-kalau pcId yg dikirim beneran ITxxxxx
+        if (!pc) {
+          pc = await Pc.findOne({ pcId });
+        }
         if (pc) {
           await Pc.findByIdAndUpdate(pc._id, {
             status: "online",
@@ -61,6 +69,9 @@ function registerSocketHandlers(io) {
               console.warn("⚠️ Geo resolve failed:", geoErr.message);
             }
           }
+        } else {
+          console.warn(`⚠️ PC not found on join-room: ${pcId}. Forcing agent to re-register.`);
+          socket.emit("force-re-register");
         }
       } catch (err) {
         console.error("❌ Error setting online status:", err.message);
@@ -235,15 +246,18 @@ function registerSocketHandlers(io) {
         const updateData = { status, lastActive: timestamp || new Date() };
         if (version) updateData.agentVersion = version;
 
-        const updated = await Pc.findByIdAndUpdate(
+        const pc = await Pc.findById(pcId);
+        if (!pc) {
+          console.warn(`⚠️ PC _id tidak ditemukan: ${pcId}`);
+          socket.emit("force-re-register");
+          return;
+        }
+
+        await Pc.findByIdAndUpdate(
           pcId,
           updateData,
           { new: true }
         );
-
-        if (!updated) {
-          console.warn("⚠️ PC _id tidak ditemukan:", pcId);
-        }
       } catch (err) {
         console.error("❌ Status update error:", err.message);
       }
@@ -257,6 +271,9 @@ function registerSocketHandlers(io) {
 
         if (result.message === "No spec changes") {
           console.log("ℹ️ Spesifikasi tidak berubah, tidak disimpan ulang.");
+        } else if (result.message === "PC not found") {
+          console.warn(`⚠️ PC tidak ditemukan saat memproses spec: ${data.pcId}. Memaksa agent registrasi ulang...`);
+          socket.emit("force-re-register");
         } else {
           console.log("✅ Spesifikasi diproses:", result.message);
         }
