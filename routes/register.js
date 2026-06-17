@@ -97,7 +97,7 @@ router.post("/register", async (req, res) => {
 
     pc = await Pc.create(doc);
 
-    // ─── Auto-create Asset record ───────────────────────
+    // ─── Auto-create / Auto-link Asset record ───────────────────────
     try {
       const subCat = deviceType === "LT" ? "Laptop" : "Desktop";
 
@@ -113,21 +113,52 @@ router.post("/register", async (req, res) => {
       let siteName = "";
       if (loc) siteName = loc.campus || "";
 
-      await Asset.create({
-        faNumber: safeString(assetNumber, "") || undefined, // assetNumber = faNumber
-        serialNumber,
-        status: "Deployed",
-        site: siteName,
-        ownerFullname: ownerName,
-        customSpecs: [
-          ...(cpu ? [{ key: "CPU", value: cpu }] : []),
-          ...(ram ? [{ key: "RAM", value: ram }] : []),
-          ...(osInfo ? [{ key: "OS", value: osInfo }] : []),
-          ...(storage ? [{ key: "Storage", value: storage }] : []),
-        ],
-        pc: pc._id,
-      });
-      console.log("📦 Asset auto-created for PC:", pc.pcId);
+      const agentSpecs = [
+        ...(cpu ? [{ key: "CPU", value: cpu }] : []),
+        ...(ram ? [{ key: "RAM", value: ram }] : []),
+        ...(osInfo ? [{ key: "OS", value: osInfo }] : []),
+        ...(storage ? [{ key: "Storage", value: storage }] : []),
+      ];
+
+      // Cek apakah Asset dengan Serial Number ini sudah diinput manual sebelumnya
+      let existingAsset = await Asset.findOne({ serialNumber });
+
+      if (existingAsset) {
+        // Merge specs: update spec yang ada dengan data real dari agen
+        const mergedSpecs = existingAsset.customSpecs ? [...existingAsset.customSpecs] : [];
+        agentSpecs.forEach(newSpec => {
+          const existsIndex = mergedSpecs.findIndex(s => s.key === newSpec.key);
+          if (existsIndex === -1) {
+            mergedSpecs.push(newSpec);
+          } else {
+            mergedSpecs[existsIndex].value = newSpec.value;
+          }
+        });
+
+        // Link PC ID dan update field yang mungkin masih kosong
+        existingAsset.pc = pc._id;
+        existingAsset.customSpecs = mergedSpecs;
+        
+        // Update data jika manual input sebelumnya kosong
+        if (!existingAsset.faNumber && safeString(assetNumber, "")) existingAsset.faNumber = safeString(assetNumber, "");
+        if (!existingAsset.site && siteName) existingAsset.site = siteName;
+        if (!existingAsset.ownerFullname && ownerName) existingAsset.ownerFullname = ownerName;
+
+        await existingAsset.save();
+        console.log("📦 Existing Asset updated and linked to new PC:", pc.pcId);
+      } else {
+        // Buat baru jika belum ada
+        await Asset.create({
+          faNumber: safeString(assetNumber, "") || undefined, // assetNumber = faNumber
+          serialNumber,
+          status: "Deployed",
+          site: siteName,
+          ownerFullname: ownerName,
+          customSpecs: agentSpecs,
+          pc: pc._id,
+        });
+        console.log("📦 Asset auto-created for PC:", pc.pcId);
+      }
     } catch (assetErr) {
       // Jangan block registrasi PC jika gagal buat asset
       console.warn("⚠️ Gagal auto-create asset:", assetErr.message);
