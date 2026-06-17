@@ -134,7 +134,10 @@ router.post("/register", async (req, res) => {
         };
         
         // Update data jika manual input sebelumnya kosong
-        if (!existingAsset.faNumber && safeString(assetNumber, "")) updateData.faNumber = safeString(assetNumber, "");
+        const validAssetNumber = safeString(assetNumber, "");
+        if (!existingAsset.faNumber && validAssetNumber && validAssetNumber !== "-") {
+          updateData.faNumber = validAssetNumber;
+        }
         if (!existingAsset.site && siteName) updateData.site = siteName;
         if (!existingAsset.ownerFullname && ownerName) updateData.ownerFullname = ownerName;
 
@@ -143,8 +146,9 @@ router.post("/register", async (req, res) => {
         console.log("📦 Existing Asset updated and linked to new PC:", pc.pcId);
       } else {
         // Buat baru jika belum ada (Auto-healing jika Aset terhapus namun PC masih mengirim data)
+        const validAssetNumber = safeString(assetNumber, "");
         await Asset.create({
-          faNumber: safeString(assetNumber, "") || undefined, // assetNumber = faNumber
+          faNumber: (validAssetNumber && validAssetNumber !== "-") ? validAssetNumber : undefined,
           serialNumber,
           status: "Deployed",
           site: siteName,
