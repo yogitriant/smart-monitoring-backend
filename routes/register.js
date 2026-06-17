@@ -43,23 +43,11 @@ router.post("/register", async (req, res) => {
       return res.status(400).json({ message: "Serial number wajib diisi" });
     }
 
-    // Sudah terdaftar?
+    // Cek apakah PC Sudah terdaftar
     let pc = await Pc.findOne({ serialNumber });
-    if (pc) {
-      console.log("✅ PC sudah terdaftar:", pc.pcId);
-      return res.json({
-        message: "✅ PC already registered",
-        pcId: pc._id,
-        isAdmin: pc.isAdmin,
-        type: pc.type || (pc.pcId?.startsWith("LT") ? "LT" : "DT"),
-        userLogin: pc.userLogin,
-        assetNumber: pc.assetNumber,
-        idleTimeout: pc.idleTimeout,
-        shutdownDelay: pc.shutdownDelay,
-      });
-    }
+    let isNewPc = false;
 
-    // Lokasi fallback
+    // Persiapkan Lokasi
     const fallbackLocation = {
       category: "Unassigned",
       room: "Unknown",
@@ -71,31 +59,35 @@ router.post("/register", async (req, res) => {
     let loc = await Location.findOne(locData);
     if (!loc) loc = await Location.create(locData);
 
-    // Buat pcId baru
-    const deviceType = type || "DT";
-    const pcId = await generatePcId(deviceType);
+    const deviceType = type || (pc?.type || (pc?.pcId?.startsWith("LT") ? "LT" : "DT"));
 
-    console.log("🛬 Data diterima backend:", req.body);
-    console.log("📌 Menyimpan PC baru dengan ID:", pcId);
+    if (!pc) {
+      isNewPc = true;
+      // Buat pcId baru
+      const pcId = await generatePcId(deviceType);
 
-    // Susun dokumen
-    const doc = {
-      pcId,
-      serialNumber,
-      assetNumber: safeString(assetNumber),
-      userLogin: safeString(userLogin),
-      isAdmin: Boolean(isAdmin),
-      type: deviceType,
-      location: loc._id,
-      idleTimeout: 0,
-      shutdownDelay: 60,
-      agentVersion: agentVersion || "1.0.0",
-    };
+      console.log("🛬 Data diterima backend:", req.body);
+      console.log("📌 Menyimpan PC baru dengan ID:", pcId);
 
-    const picId = normalizePic(pic);
-    if (picId) doc.pic = picId; // hanya set jika valid
+      // Susun dokumen
+      const doc = {
+        pcId,
+        serialNumber,
+        assetNumber: safeString(assetNumber),
+        userLogin: safeString(userLogin),
+        isAdmin: Boolean(isAdmin),
+        type: deviceType,
+        location: loc._id,
+        idleTimeout: 0,
+        shutdownDelay: 60,
+        agentVersion: agentVersion || "1.0.0",
+      };
 
-    pc = await Pc.create(doc);
+      const picId = normalizePic(pic);
+      if (picId) doc.pic = picId; // hanya set jika valid
+
+      pc = await Pc.create(doc);
+    }
 
     // ─── Auto-create / Auto-link Asset record ───────────────────────
     try {
@@ -150,7 +142,7 @@ router.post("/register", async (req, res) => {
         await Asset.findByIdAndUpdate(existingAsset._id, updateData, { new: true });
         console.log("📦 Existing Asset updated and linked to new PC:", pc.pcId);
       } else {
-        // Buat baru jika belum ada
+        // Buat baru jika belum ada (Auto-healing jika Aset terhapus namun PC masih mengirim data)
         await Asset.create({
           faNumber: safeString(assetNumber, "") || undefined, // assetNumber = faNumber
           serialNumber,
@@ -164,7 +156,21 @@ router.post("/register", async (req, res) => {
       }
     } catch (assetErr) {
       // Jangan block registrasi PC jika gagal buat asset
-      console.warn("⚠️ Gagal auto-create asset:", assetErr.message);
+      console.warn("⚠️ Gagal auto-create/link asset:", assetErr.message);
+    }
+
+    if (!isNewPc) {
+      console.log("✅ PC sudah terdaftar (linked check complete):", pc.pcId);
+      return res.json({
+        message: "✅ PC already registered",
+        pcId: pc._id,
+        isAdmin: pc.isAdmin,
+        type: pc.type || (pc.pcId?.startsWith("LT") ? "LT" : "DT"),
+        userLogin: pc.userLogin,
+        assetNumber: pc.assetNumber,
+        idleTimeout: pc.idleTimeout,
+        shutdownDelay: pc.shutdownDelay,
+      });
     }
 
     return res.json({
