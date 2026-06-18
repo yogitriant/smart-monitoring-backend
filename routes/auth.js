@@ -126,6 +126,29 @@ router.post("/change-password", verifyToken, validate(changePasswordSchema), asy
     const valid = await user.comparePassword(oldPassword);
     if (!valid) return res.status(401).json({ message: "Password lama salah." });
 
+    // ⛔ Cek apakah password baru sama dengan password saat ini
+    const isSameAsCurrent = await bcrypt.compare(newPassword, user.password);
+    if (isSameAsCurrent) {
+      return res.status(400).json({ message: "Password baru tidak boleh sama dengan password saat ini." });
+    }
+
+    // ⛔ Cek password history (limit 5 terakhir)
+    if (user.passwordHistory && user.passwordHistory.length > 0) {
+      for (const oldHash of user.passwordHistory) {
+        const isUsedBefore = await bcrypt.compare(newPassword, oldHash);
+        if (isUsedBefore) {
+          return res.status(400).json({ message: "Password ini sudah pernah Anda gunakan sebelumnya. Silakan pilih kombinasi yang baru." });
+        }
+      }
+    }
+
+    // ✅ Update history (push password saat ini ke history)
+    if (!user.passwordHistory) user.passwordHistory = [];
+    user.passwordHistory.push(user.password);
+    if (user.passwordHistory.length > 5) {
+      user.passwordHistory.shift(); // Buang yang paling tua jika > 5
+    }
+
     user.password = newPassword; // akan di-hash oleh pre-save hook
     await user.save();
 

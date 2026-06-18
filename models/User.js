@@ -8,6 +8,7 @@ const userSchema = new mongoose.Schema(
     password: { type: String, required: true },
     site: { type: String, default: "" },
     department: { type: String, default: "" },
+    passwordHistory: { type: [String], default: [] },
     loginAttempts: { type: Number, required: true, default: 0 },
     lockUntil: { type: Number },
     role: {
