@@ -10,8 +10,8 @@ router.get("/filters", verifyToken, async (req, res) => {
     try {
         const { site, department, pic } = req.query;
 
-        // Base filter — setiap level menambah constraint ke level di bawahnya
-        const baseFilter = {};
+        // Base filter — hanya aset yang terhubung ke PC (memiliki data aktual)
+        const baseFilter = { pc: { $ne: null } };
 
         // Security: user role hanya boleh lihat site-nya sendiri
         if (req.user && req.user.role === "user") {
