@@ -5,15 +5,37 @@ const Performance = require("../models/Performance");
 const Pc = require("../models/Pc");
 const verifyToken = require("../middleware/verifyToken");
 
-// ─── GET /api/analytics/filters ── Distinct values for filters ──
+// ─── GET /api/analytics/filters ── Cascading filters ──
 router.get("/filters", verifyToken, async (req, res) => {
     try {
-        const [sites, departments, pics, devices] = await Promise.all([
-            Asset.distinct("site"),
-            Asset.distinct("department"),
-            Asset.distinct("ownerFullname"),
-            Asset.distinct("faNumber"),
-        ]);
+        const { site, department, pic } = req.query;
+
+        // Base filter — setiap level menambah constraint ke level di bawahnya
+        const baseFilter = {};
+
+        // Security: user role hanya boleh lihat site-nya sendiri
+        if (req.user && req.user.role === "user") {
+            baseFilter.site = req.user.site;
+        }
+
+        // Sites — selalu tampilkan semua (kecuali role user)
+        const siteFilter = { ...baseFilter };
+        const sites = await Asset.distinct("site", siteFilter);
+
+        // Departments — filter berdasarkan site yang dipilih
+        const deptFilter = { ...baseFilter };
+        if (site) deptFilter.site = site;
+        const departments = await Asset.distinct("department", deptFilter);
+
+        // PICs — filter berdasarkan site + department
+        const picFilter = { ...deptFilter };
+        if (department) picFilter.department = department;
+        const pics = await Asset.distinct("ownerFullname", picFilter);
+
+        // Devices — filter berdasarkan site + department + pic
+        const deviceFilter = { ...picFilter };
+        if (pic) deviceFilter.ownerFullname = pic;
+        const devices = await Asset.distinct("faNumber", deviceFilter);
 
         res.json({
             sites: sites.filter(Boolean),
