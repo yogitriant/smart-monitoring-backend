@@ -148,9 +148,11 @@ router.post("/change-password", verifyToken, validate(changePasswordSchema), asy
     if (user.passwordHistory.length > 5) {
       user.passwordHistory.shift(); // Buang yang paling tua jika > 5
     }
+    user.markModified("passwordHistory"); // Force Mongoose untuk mendeteksi perubahan array
 
     user.password = newPassword; // akan di-hash oleh pre-save hook
     await user.save();
+    console.log(`🔒 Password changed for user ${user.username}. History count: ${user.passwordHistory.length}`);
 
     res.json({ message: "Password berhasil diubah." });
   } catch (err) {
