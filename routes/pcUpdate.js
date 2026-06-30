@@ -197,10 +197,10 @@ router.patch("/performance-interval", verifyToken, async (req, res) => {
         .json({ message: "Format data tidak valid (pcIds/performanceInterval)" });
     }
 
-    // ⚙️ Batas aman interval (10 detik – 1 jam)
-    if (performanceInterval < 10 || performanceInterval > 3600) {
+    // ⚙️ Batas aman interval (0 = startup only, atau 10–86400 detik)
+    if (performanceInterval !== 0 && (performanceInterval < 10 || performanceInterval > 86400)) {
       return res.status(400).json({
-        message: "Interval harus antara 10–3600 detik (10 dtk – 1 jam)",
+        message: "Interval harus 0 (startup only) atau antara 10–86400 detik",
       });
     }
 

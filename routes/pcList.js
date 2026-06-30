@@ -229,7 +229,7 @@ router.get("/list-with-location", verifyToken, async (req, res) => {
         picName: typeof pc.pic === "object" ? pc.pic?.name : pc.pic || null,
         picEmail: typeof pc.pic === "object" ? pc.pic?.email : null,
         idleTimeout: pc.idleTimeout ?? 0,
-        performanceInterval: pc.performanceInterval ?? 3600, // ✅ default 1 jam (detik)
+        performanceInterval: pc.performanceInterval ?? 0, // 🕒 default 0 (startup only)
       })
     );
 

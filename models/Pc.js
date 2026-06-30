@@ -40,7 +40,7 @@ const pcSchema = new mongoose.Schema(
     // Agent settings
     idleTimeout: { type: Number, default: 0 },
     shutdownDelay: { type: Number, default: 0 },
-    performanceInterval: { type: Number, default: 3600 },
+    performanceInterval: { type: Number, default: 0 },
 
     // Snapshot performance terbaru
     performance: {
