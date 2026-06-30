@@ -25,7 +25,7 @@ router.get("/agent-config/:id", async (req, res) => {
       idleTimeout: pc.idleTimeout || 0,
       shutdownDelay: pc.shutdownDelay || 60,
       uptimeInterval: 10,
-      performanceInterval: pc.performanceInterval || 3600,
+      performanceInterval: typeof pc.performanceInterval === "number" ? pc.performanceInterval : 0,
     };
 
     res.json(config);
